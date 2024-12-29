@@ -4,6 +4,16 @@
 
 SIMD CRC64 for C++
 
+## pybind support
+
+After enable VPCLMULQDQ, calculation result is different,so I disable it.PCLMULQDQ is fast already.
+
+```bash
+git clone --recursive https://github.com/Wormh0-le/fastpycrc64.git
+cd fastpycrc64
+pip install .
+```
+
 ## Benchmark
 
 ### GCC-11 (x86_64, Intel(R) Xeon(R) E-2176M  CPU @ 2.70GHz)

@@ -4,6 +4,7 @@ project(crc64)
 set(CMAKE_CXX_STANDARD 17)
 
 set(BUILD_PIC ON CACHE BOOL "Needed to require CPU feature PIC build" FORCE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static -static-libgcc -static-libstdc++")
 add_subdirectory(cpu_features)
 include_directories(cpu_features/include)
 include_directories(include)
@@ -11,17 +12,15 @@ include_directories(include)
 add_library(crc64 INTERFACE)
 target_link_libraries(crc64 INTERFACE)
 
-option(CRC64_ENABLE_TESTS "Enable CRC64 Tests (Require GTest)" ON)
-option(CRC64_ENABLE_BENCHES "Enable CRC64 Benchmark (Require Benchmark)" ON)
-option(CRC64_ENABLE_CAPI "Enable CRC64 CAPI" ON)
-option(CRC64_DISABLE_WERROR "Disable strict mode" OFF)
-# Premature optimization is the root of all evil -- Donald Knuth
+option(CRC64_ENABLE_PYBIND "Enable Python binding for CRC64" ON)
+option(CRC64_ENABLE_TESTS "Enable CRC64 Tests (Require GTest)" OFF)
+option(CRC64_ENABLE_BENCHES "Enable CRC64 Benchmark (Require Benchmark)" OFF)
+option(CRC64_ENABLE_CAPI "Enable CRC64 CAPI" OFF)
+option(CRC64_DISABLE_WERROR "Disable strict mode" ON)
 option(CRC64_ENABLE_UNROLL "Enable stronger unrolling" OFF)
 
-
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag(-mvpclmulqdq CRC64_VPCLMULQDQ_SUPPORT)
-
+# include(CheckCXXCompilerFlag)
+# check_cxx_compiler_flag(-mvpclmulqdq CRC64_VPCLMULQDQ_SUPPORT)
 
 if (CRC64_ENABLE_CAPI)
     set(CRC64_CAPI_SRC src/ffi.cpp)
@@ -59,11 +58,13 @@ else()
     set(CRC64_ADDITIONAL_FLAGS "")
 endif()
 
-if(CRC64_VPCLMULQDQ_SUPPORT)
-    set(CRC64_VPCLMULQDQ_SRC src/vpclmulqdq_avx512.cpp src/vpclmulqdq_avx2.cpp)
-else()
-    set(CRC64_VPCLMULQDQ_SRC "")
-endif()
+# After Enable VPCLMULQDQ, computation result is wrong.
+# if(CRC64_VPCLMULQDQ_SUPPORT)
+#     set(CRC64_VPCLMULQDQ_SRC src/vpclmulqdq_avx512.cpp src/vpclmulqdq_avx2.cpp)
+# else()
+#     set(CRC64_VPCLMULQDQ_SRC "")
+# endif()
+set(CRC64_VPCLMULQDQ_SRC "")
 
 configure_file(include/crc64_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/crc64_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -94,6 +95,13 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(arm64)|(ARM64)|(aarch64)|(AARCH64)")
     target_link_libraries(crc64 INTERFACE crc64-aarch64 cpu_features)
 endif()
 
+if (CRC64_ENABLE_PYBIND)
+    find_package(pybind11 CONFIG REQUIRED)
+    pybind11_add_module(fastpycrc64 pybind/src/binding.cpp)
+    target_link_libraries(fastpycrc64 PRIVATE crc64)
+    message(STATUS "Python binding for CRC64 enabled")
+endif()
+
 if (CRC64_ENABLE_TESTS)
     find_package(GTest REQUIRED)
     find_package(Threads REQUIRED)
@@ -106,7 +114,6 @@ if (CRC64_ENABLE_TESTS)
     add_test(gtest crc64-test)
 endif()
 
-
 if (CRC64_ENABLE_BENCHES)
     find_package(benchmark REQUIRED)
     file(GLOB CRC64_TEST_SRC benches/*.cpp)
@@ -115,7 +122,6 @@ if (CRC64_ENABLE_BENCHES)
     target_link_libraries(crc64-bench crc64 benchmark::benchmark)
 endif()
 
-
 file(GLOB CRC64_FMT_FILES
         benches/*.cpp
         tests/*.cpp
@@ -123,8 +129,7 @@ file(GLOB CRC64_FMT_FILES
         include/*.hpp
         include/*.h
         include/crc64/*.hpp
-        include/crc64/*.h
-        )
+        include/crc64/*.h)
 
 add_custom_target(
         format

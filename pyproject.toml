@@ -1,0 +1,26 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "ninja",
+    "cmake>=3.12",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastpycrc64"
+requires-python = ">=3.7"
+version = "0.0.1"
+
+[[tool.mypy.overrides]]
+module = ["ninja"]
+ignore_missing_imports = true
+
+[tool.ruff.lint]
+extend-select = [
+  "B",    # flake8-bugbear
+  "I",    # isort
+  "PGH",  # pygrep-hooks
+  "RUF",  # Ruff-specific
+  "UP",   # pyupgrade
+]
